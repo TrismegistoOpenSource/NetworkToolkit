@@ -1,0 +1,604 @@
+/* SPDX-License-Identifier: MIT */
+
+/* ===========================================================
+   NetworkToolkit — layout Aurora (sidebar + tool) con i LED di
+   RsyncGUI. Tema scuro di default, chiaro commutabile.
+   =========================================================== */
+:root {
+    /* DARK (default) — palette RsyncGUI */
+    --bg: #0e1016;
+    --bg-raise: #151823;
+    --sidebar: #0b0d13;
+    --surface: #151823;
+    --surface-2: #1b1f2c;
+    --panel: rgba(255, 255, 255, 0.045);
+    --border: rgba(255, 255, 255, 0.09);
+    --border-strong: rgba(255, 255, 255, 0.16);
+    --hover: rgba(255, 255, 255, 0.07);
+
+    --text: #e8ecf4;
+    --text-dim: #8b93a7;
+    --placeholder: #6b7286;
+
+    --accent-a: #4fd1ff;
+    --accent-b: #5b6cff;
+    --accent-grad: linear-gradient(135deg, #4fd1ff, #5b6cff);
+    --accent-soft: rgba(79, 209, 255, 0.14);
+    --on-accent: #06285a;
+
+    --success: #34d399;
+    --warn: #fbbf24;
+    --danger: #f87171;
+
+    --radius: 14px;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+    --shadow-md: 0 2px 6px rgba(0,0,0,0.36), 0 6px 16px rgba(0,0,0,0.28);
+    --led-off: rgba(255, 255, 255, 0.18);
+    --btn-tint: rgba(56, 120, 240, 0.17);
+    --btn-tint-hover: rgba(56, 120, 240, 0.28);
+    --btn-edge: #3f82f2;
+    --btn2-tint: rgba(160, 140, 255, 0.14);
+    --btn2-tint-hover: rgba(160, 140, 255, 0.24);
+    --btn2-edge: #a08cff;
+    color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+    --bg: #f4f6fb;
+    --bg-raise: #ffffff;
+    --sidebar: #eef1f7;
+    --surface: #ffffff;
+    --surface-2: #f4f6fb;
+    --panel: rgba(10, 20, 40, 0.03);
+    --border: rgba(10, 20, 40, 0.10);
+    --border-strong: rgba(10, 20, 40, 0.18);
+    --hover: rgba(10, 20, 40, 0.05);
+
+    --text: #1a1f2b;
+    --text-dim: #5a6273;
+    --placeholder: #9aa0ad;
+
+    --accent-a: #2094d4;
+    --accent-b: #3d4fe0;
+    --accent-grad: linear-gradient(135deg, #2094d4, #3d4fe0);
+    --accent-soft: rgba(32, 148, 212, 0.12);
+    --on-accent: #ffffff;
+
+    --success: #10a674;
+    --warn: #c98a00;
+    --danger: #d5453f;
+    --shadow-md: 0 1px 3px rgba(30,40,60,0.12), 0 4px 10px rgba(30,40,60,0.08);
+    --led-off: rgba(10, 20, 40, 0.18);
+    --btn-tint: rgba(28, 92, 205, 0.10);
+    --btn-tint-hover: rgba(28, 92, 205, 0.17);
+    --btn-edge: #1c5ccd;
+    --btn2-tint: rgba(120, 96, 230, 0.09);
+    --btn2-tint-hover: rgba(120, 96, 230, 0.16);
+    --btn2-edge: #7860e6;
+    color-scheme: light;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, sans-serif;
+    font-size: 13.5px;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+}
+
+#drag-region {
+    --wails-draggable: drag;
+    -webkit-app-region: drag;
+    height: 30px;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    z-index: 1000;
+    display: none;
+}
+/* solo macOS: barra del titolo nascosta, semafori sopra il contenuto */
+html[data-os="darwin"] #drag-region { display: block; }
+html[data-os="darwin"] .layout { padding-top: 30px; }
+
+.layout {
+    display: flex;
+    height: 100vh;
+    background:
+        radial-gradient(1200px 500px at 85% -10%, rgba(91, 108, 255, 0.10), transparent 60%),
+        radial-gradient(900px 400px at -10% 110%, rgba(79, 209, 255, 0.06), transparent 60%),
+        var(--bg);
+}
+
+/* ---- Sidebar (Aurora) ---- */
+.sidebar {
+    width: 230px;
+    min-width: 230px;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 18px 0 12px;
+}
+
+.logo {
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 0.10em;
+    line-height: 1.15;
+    margin: 4px 0 4px;
+    padding: 0 16px;
+    color: var(--text);
+}
+.logo span {
+    display: block;
+    background: var(--accent-grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.version-badge {
+    display: block;
+    text-align: center;
+    margin: 0 0 22px;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    min-height: 1em;
+}
+
+nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-right: 12px;
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    padding: 11px 20px;
+    text-align: left;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-radius: 0 100px 100px 0;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.nav-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+.nav-btn:hover { color: var(--text); background: var(--hover); }
+.nav-btn.active { color: var(--accent-a); background: var(--accent-soft); font-weight: 600; }
+
+.sidebar-footer {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 16px 4px;
+}
+.toggle-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    color: var(--text-dim);
+    font-size: 0.8rem; font-weight: 600; font-family: inherit;
+    text-align: left; cursor: pointer;
+    transition: all 0.18s ease;
+}
+.toggle-btn:hover { color: var(--text); background: var(--hover); }
+.theme-icon { display: inline-flex; align-items: center; }
+.theme-icon svg { width: 16px; height: 16px; }
+.icon-sun, .label-light { display: none; }
+.icon-moon, .label-dark { display: inline-flex; }
+:root[data-theme="light"] .icon-sun { display: inline-flex; }
+:root[data-theme="light"] .icon-moon { display: none; }
+:root[data-theme="light"] .label-light { display: inline; }
+:root[data-theme="light"] .label-dark { display: none; }
+
+/* ---- Content ---- */
+.content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+.view {
+    position: absolute;
+    inset: 0;
+    padding: 26px 34px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    overflow-y: auto;
+    /* Le viste sono impilate una sull'altra: senza questo si vedrebbero tutte
+       insieme sovrapposte (non si notava finché il toolkit era uno solo). */
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.view.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+.view-header h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: 0.01em; }
+.view-header p { color: var(--text-dim); font-size: 0.9rem; margin-top: 3px; }
+
+/* ---- Cards ---- */
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow-md);
+}
+.card-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.card-header h3 { font-size: 0.95rem; font-weight: 600; flex: 1; }
+.hint { font-size: 12px; color: var(--text-dim); line-height: 1.45; margin: 2px 0 12px; }
+
+.mac-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 18px;
+    align-items: start;
+}
+@media (max-width: 860px) { .mac-grid { grid-template-columns: 1fr; } }
+
+/* ---- Interface list ---- */
+.iface-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.iface-list:empty::after {
+    content: 'Nessuna scheda di rete rilevata.';
+    display: block; text-align: center; padding: 26px;
+    color: var(--text-dim); font-size: 0.85rem;
+}
+.iface {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 13px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--panel);
+    cursor: pointer;
+    transition: border-color 0.16s, background 0.16s;
+}
+.iface:hover { border-color: var(--border-strong); }
+.iface.selected { border-color: var(--accent-a); background: var(--accent-soft); }
+.iface input { display: none; }
+
+/* LED di stato (RsyncGUI) */
+/* Il colore del LED spento sta in una variabile: una regola
+   ":root[data-theme=light] .led" è più specifica di ".led.active" e nel tema
+   chiaro spegneva TUTTI i LED (corretto il 07/10/2026). */
+.led {
+    width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+    background: var(--led-off);
+}
+.led.active  { background: var(--success); box-shadow: 0 0 8px rgba(52,211,153,0.55); }
+.led.spoofed { background: var(--warn);    box-shadow: 0 0 8px rgba(251,191,36,0.5); }
+.led.up      { background: var(--accent-a); box-shadow: 0 0 6px rgba(79,209,255,0.4); }
+.led.down    { background: var(--text-dim); opacity: 0.6; }
+.led.fail    { background: var(--danger);  box-shadow: 0 0 8px rgba(248,113,113,0.5); }
+
+.iface-icon { width: 20px; height: 20px; color: var(--text-dim); flex-shrink: 0; }
+.iface-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.iface-name { font-size: 12.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.iface-sub { font-size: 10.5px; color: var(--text-dim); }
+.iface-macs { font-family: var(--mono); font-size: 11.5px; color: var(--text); }
+.iface-macs .perm { color: var(--text-dim); }
+.iface-macs .cur.changed { color: var(--accent-a); }
+
+.badge {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 20px; flex-shrink: 0;
+}
+.badge.active { color: var(--success); background: rgba(52,211,153,0.14); }
+.badge.wifi { color: var(--accent-a); background: var(--accent-soft); }
+
+.checkbox {
+    width: 18px; height: 18px; flex-shrink: 0;
+    border: 1.6px solid var(--border-strong); border-radius: 5px;
+    position: relative; transition: all 0.16s;
+}
+.iface.selected .checkbox { background: var(--accent-a); border-color: var(--accent-a); }
+.iface.selected .checkbox::after {
+    content: '✓'; position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--on-accent); font-size: 12px; font-weight: 900;
+}
+
+/* ---- Actions ---- */
+.actions-card { display: flex; flex-direction: column; gap: 18px; }
+.actions-block { display: flex; flex-direction: column; gap: 8px; }
+.actions-title { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-dim); }
+.actions-block .hint { margin: 0 0 4px; }
+
+.btn-primary, .btn-secondary, .btn-ghost {
+    font-family: inherit; cursor: pointer; border: none;
+    transition: all 0.16s;
+}
+/* Pulsanti principali come le schede di rete selezionate: fondo blu
+   semitrasparente e bordo più acceso, uguali per tutti (Switcha temporaneo e
+   permanente compresi). Richiesta dell'utente, 07/10/2026: niente più pieni
+   azzurro acqua e viola. */
+.btn-primary {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    background: var(--btn-tint); color: var(--text);
+    border: 1px solid var(--btn-edge);
+    padding: 11px; border-radius: 10px;
+    font-size: 0.9rem; font-weight: 700;
+}
+.btn-primary small { font-size: 10px; font-weight: 500; opacity: 0.8; }
+.btn-primary:hover:not(:disabled) { background: var(--btn-tint-hover); box-shadow: var(--shadow-md); }
+/* Switcha temporaneo: stessa forma, viola chiaro, per distinguerlo a colpo
+   d'occhio dal permanente, che resta blu (scelta dell'utente, 07/10/2026). */
+.btn-primary.alt { background: var(--btn2-tint); border-color: var(--btn2-edge); }
+.btn-primary.alt:hover:not(:disabled) { background: var(--btn2-tint-hover); }
+
+.btn-secondary {
+    background: transparent; color: var(--text);
+    border: 1px solid var(--border-strong);
+    padding: 10px; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
+}
+.btn-secondary:hover:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+
+.btn-ghost {
+    background: transparent; color: var(--accent-a);
+    padding: 6px 12px; border-radius: 100px; font-size: 0.8rem; font-weight: 600;
+}
+.btn-ghost:hover { background: var(--accent-soft); }
+
+.btn-primary:disabled, .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.os-note { font-size: 11px; color: var(--text-dim); line-height: 1.4; margin-top: 2px; }
+
+/* ---- Console ---- */
+.console-card { display: flex; flex-direction: column; min-height: 150px; }
+.console {
+    font-family: var(--mono); font-size: 11.5px; line-height: 1.55;
+    background: var(--bg); color: var(--text-dim);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin: 0;
+    height: 190px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-word;
+    user-select: text;
+}
+.console .ok   { color: var(--success); }
+.console .err  { color: var(--danger); }
+.console .warn { color: var(--warn); }
+.console .dim  { color: var(--placeholder); }
+
+/* ---- Toast ---- */
+#toast {
+    position: fixed; bottom: 26px; left: 50%;
+    transform: translateX(-50%) translateY(120px);
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border-strong);
+    padding: 12px 22px; border-radius: 10px; font-size: 0.85rem; font-weight: 600;
+    box-shadow: 0 8px 26px rgba(0,0,0,0.4);
+    transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 2000; max-width: 70%;
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+#toast.ok  { border-color: var(--success); }
+#toast.err { border-color: var(--danger); }
+
+/* ---- Scrollbar ---- */
+/* Su Linux (WebKitGTK) le barre occupano spazio: l'angolo fra le due va
+   colorato, o esce bianco (PROBLEMI-NOTI.md §29). */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 100px; }
+
+/* Stato "operazione in corso": la UI resta ferma finché il dialog password
+   dell'OS è aperto. */
+body.busy .content { opacity: 0.6; pointer-events: none; }
+
+/* ===========================================================
+   Toolkit velocità — quadranti
+   =========================================================== */
+.gauge-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+@media (max-width: 860px) { .gauge-grid { grid-template-columns: 1fr; } }
+
+.gauge-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 18px 18px;
+}
+.gauge-title {
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em;
+    color: var(--text-dim);
+}
+.gauge { width: 100%; max-width: 300px; }
+.gauge svg { width: 100%; height: auto; display: block; }
+
+/* Parti del quadrante. I colori stanno qui (non nel JS) così il tema
+   chiaro/scuro funziona senza ridisegnare nulla. */
+.g-track  { stroke: var(--border); }
+/* Lo stroke del gradiente si imposta inline sull'elemento, perché ogni
+   quadrante ha il PROPRIO id di gradiente: due <defs> con lo stesso id nella
+   stessa pagina si risolverebbero in modo imprevedibile. I colori però
+   restano qui, così il tema chiaro/scuro li segue senza ridisegnare nulla. */
+.g-grad-a { stop-color: var(--accent-a); }
+.g-grad-b { stop-color: var(--accent-b); }
+.g-tick   { stroke: var(--text-dim); opacity: 0.55; }
+.g-tick.major { stroke: var(--text); opacity: 0.7; }
+.g-ticklabel {
+    fill: var(--text-dim); font-size: 9px; font-weight: 600;
+    text-anchor: middle; dominant-baseline: middle;
+}
+.g-needle { fill: var(--accent-a); }
+.g-hub    { fill: var(--surface); stroke: var(--accent-a); stroke-width: 2.5; }
+/* Il numero sta DENTRO la corona delle tacche. La misura è vincolata dal caso
+   peggiore: fondo-scala a tre cifre (100, 1000) con etichette laterali vicine
+   al centro — lì un font più grande finisce sopra i numeri della scala. */
+.g-value-text {
+    fill: var(--text); font-size: 22px; font-weight: 700;
+    text-anchor: middle; font-variant-numeric: tabular-nums;
+}
+.g-unit {
+    fill: var(--text-dim); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.12em; text-anchor: middle;
+}
+
+/* L'ago e l'arco INSEGUONO il valore invece di scattarci sopra: è quello che
+   fa sembrare vivo un quadrante. La curva è volutamente "molle" in entrata e
+   secca in uscita, come uno strumento fisico che si assesta. */
+.g-needle-group,
+.g-value {
+    transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+                stroke-dashoffset 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Durante il "power-on" scenico la spazzata è più lenta e teatrale. */
+.gauge.powering .g-needle-group,
+.gauge.powering .g-value {
+    transition: transform 0.9s cubic-bezier(0.34, 1.2, 0.64, 1),
+                stroke-dashoffset 0.9s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.speed-bar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 18px;
+}
+.speed-bar .btn-primary { min-width: 160px; flex-shrink: 0; }
+.speed-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.speed-status { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.speed-status.running { color: var(--success); }
+.speed-status.error { color: var(--danger); }
+.speed-note { font-size: 11px; color: var(--text-dim); line-height: 1.45; }
+.speed-note code {
+    background: var(--hover); color: var(--text);
+    padding: 1px 5px; border-radius: 5px; font-family: var(--mono); font-size: 10.5px;
+}
+
+/* ===========================================================
+   Toolkit Tailscale e OpenVPN (solo Linux)
+   =========================================================== */
+.view { overflow-x: hidden; }
+
+.vpn-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    align-items: start;
+}
+@media (max-width: 860px) { .vpn-grid { grid-template-columns: 1fr; } }
+
+.vpn-card { display: flex; flex-direction: column; gap: 10px; }
+.vpn-card .hint { margin: 0; }
+.vpn-head { display: flex; align-items: center; gap: 12px; }
+.vpn-head .led { width: 13px; height: 13px; }
+.vpn-head-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.vpn-state { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+.hint.inline { margin: 0; }
+.hint code, .os-note code, .notice code {
+    background: var(--hover); color: var(--text);
+    padding: 1px 5px; border-radius: 5px; font-family: var(--mono); font-size: 10.5px;
+}
+
+.btn-row { display: flex; gap: 10px; }
+.btn-row > button { flex: 1; }
+
+/* Interruttore "All'avvio del sistema": mostra lo stato VERO letto con
+   systemctl is-enabled, non l'ultimo clic. */
+.switch-row {
+    display: flex; align-items: center; gap: 10px;
+    background: transparent; border: none; color: var(--text);
+    font-family: inherit; font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; padding: 4px 0; text-align: left;
+}
+.switch-row:disabled { opacity: 0.45; cursor: not-allowed; }
+.switch {
+    width: 36px; height: 20px; border-radius: 20px; flex-shrink: 0;
+    background: var(--border-strong); position: relative; transition: background 0.18s;
+}
+.switch .knob {
+    position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.35); transition: left 0.18s;
+}
+.switch-row[aria-checked="true"] .switch { background: var(--success); }
+.switch-row[aria-checked="true"] .knob { left: 18px; }
+
+.notice { border-color: var(--warn); }
+.notice p { line-height: 1.5; }
+.cmd-line {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 6px 6px 12px;
+}
+.cmd-line code { flex: 1; font-family: var(--mono); font-size: 11.5px; user-select: text; overflow-wrap: anywhere; }
+
+.login-link { align-self: flex-start; }
+.health, .notes { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.health li, .notes li {
+    font-size: 11.5px; line-height: 1.45; color: var(--warn);
+    border-left: 2px solid var(--warn); padding-left: 8px; user-select: text; overflow-wrap: anywhere;
+}
+
+/* Menu dei tunnel: appearance none e freccia disegnata, perché WebKitGTK
+   ignora il CSS dei <select> e userebbe il tema GTK (§29). */
+.tunnel-select {
+    width: 100%;
+    appearance: none; -webkit-appearance: none;
+    background-color: var(--bg); color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: 9px;
+    padding: 9px 34px 9px 12px; font-family: inherit; font-size: 0.88rem; font-weight: 600;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a7' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; background-size: 14px;
+    cursor: pointer;
+}
+.tunnel-select:disabled { opacity: 0.5; cursor: not-allowed; }
+.tunnel-select option { background: var(--surface); color: var(--text); }
+.tunnel-name { font-size: 1rem; font-weight: 700; font-family: var(--mono); }
+.tunnel-empty { font-size: 12px; line-height: 1.5; color: var(--text-dim); }
+.tunnel-empty code { background: var(--hover); color: var(--text); padding: 1px 5px; border-radius: 5px; font-family: var(--mono); font-size: 10.5px; user-select: text; }
+
+.ip-table { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: baseline; }
+.ip-table dt { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); }
+.ip-table dd { font-family: var(--mono); font-size: 0.95rem; color: var(--text); user-select: text; }
+
+.peer-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.peer-list:empty::after {
+    content: attr(data-empty);
+    display: block; text-align: center; padding: 18px;
+    color: var(--text-dim); font-size: 0.85rem;
+}
+.peer {
+    display: grid; grid-template-columns: 11px minmax(0, 1.3fr) minmax(0, 1.2fr) minmax(0, 0.6fr);
+    align-items: center; gap: 12px;
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel);
+}
+.peer-name { font-weight: 600; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.peer-name .badge { margin-left: 6px; }
+.peer-ips { font-family: var(--mono); font-size: 11.5px; user-select: text; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.peer-os { font-size: 11px; color: var(--text-dim); text-align: right; }
+
+/* Console dei toolkit VPN: ora, riga di comando, stdout, stderr. */
+.console .t    { color: var(--placeholder); }
+.console .cmd  { color: var(--accent-a); font-weight: 600; }
+.console .out  { color: var(--text); }
+.console .serr { color: var(--warn); }
+.console .info { color: var(--text-dim); font-style: italic; }
+.console a { color: var(--accent-a); text-decoration: underline; cursor: pointer; }

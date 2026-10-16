@@ -1,0 +1,6 @@
+tailscale-status-needslogin.json: uscita vera di `tailscale status --json`
+  (Tailscale 1.102.5, una VM Linux, 07/10/2026, servizio attivo e mai fatto login).
+tailscale-status-running.json: stessa struttura, con BackendState "Running" e
+  tre macchine nella rete. Ricavato dal file vero sopra (nomi dei campi
+  identici); nomi, chiavi e IP sono inventati. Da sostituire con un'uscita
+  vera, anonimizzata, appena c'è una macchina collegata a una rete Tailscale.
