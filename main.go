@@ -52,6 +52,7 @@ func main() {
 		Bind: []interface{}{
 			app,
 		},
+		Windows: windowsOptions(),
 		Linux: &linux.Options{
 			Icon: windowIcon(appIcon), // ridotta: vedi icon_linux.go
 		},

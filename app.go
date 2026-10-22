@@ -18,13 +18,15 @@ import (
 )
 
 // Version è la versione dell'app. Va tenuta allineata a wails.json e al tag git.
-const Version = "0.2.1"
+const Version = "0.3.0"
 
 // App è la struttura legata al frontend da Wails: ogni metodo esportato diventa
 // una funzione chiamabile dalla UI.
 type App struct {
 	ctx context.Context
 	st  *store.Store
+	// esito dell'autoverifica all'avvio (integrity.go)
+	integrity integrityState
 
 	// mu serializza le operazioni privilegiate: due switch in parallelo
 	// aprirebbero due dialog di password e si pesterebbero i piedi.
@@ -107,36 +109,22 @@ func (a *App) Reset(ids []string) OpResult {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	current, err := a.listUI()
-	if err != nil {
-		return a.opError("elenco schede fallito: " + err.Error())
-	}
-	byID := indexByID(current)
-
-	var targets []changer.Target
-	for _, id := range ids {
-		it, ok := byID[id]
-		if !ok {
-			continue
-		}
-		perm := a.resolvePermanent(it.Interface)
-		targets = append(targets, changer.Target{
-			ID: it.ID, Name: it.DisplayName, Kind: it.Kind, MAC: perm,
-		})
-	}
-	if len(targets) == 0 {
-		return a.opError("nessuna scheda valida selezionata")
+	targets, errMsg := a.targetsFor(ids, func(it UIInterface) (string, error) {
+		return a.resolvePermanent(it.Interface), nil
+	})
+	if errMsg != "" {
+		return a.opError(errMsg)
 	}
 	return a.apply(changer.Request{Action: changer.ActionReset, Targets: targets})
 }
 
-func (a *App) switchRandom(ids []string, persistent bool) OpResult {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-
+// targetsFor costruisce i bersagli per le schede scelte; macFor decide il MAC
+// che ognuna riceve. Va chiamata con a.mu preso. Restituisce un messaggio
+// d'errore non vuoto se non si può procedere.
+func (a *App) targetsFor(ids []string, macFor func(UIInterface) (string, error)) ([]changer.Target, string) {
 	current, err := a.listUI()
 	if err != nil {
-		return a.opError("elenco schede fallito: " + err.Error())
+		return nil, "elenco schede fallito: " + err.Error()
 	}
 	byID := indexByID(current)
 
@@ -146,20 +134,37 @@ func (a *App) switchRandom(ids []string, persistent bool) OpResult {
 		if !ok {
 			continue
 		}
-		// Fissa il MAC di fabbrica PRIMA di cambiarlo, se non già noto: è
-		// l'ancora del ripristino.
-		a.snapshotOriginal(it.Interface)
-
-		mac, gerr := macaddr.GenerateLocalRandom()
-		if gerr != nil {
-			return a.opError("generazione MAC fallita: " + gerr.Error())
+		mac, err := macFor(it)
+		if err != nil {
+			return nil, err.Error()
 		}
 		targets = append(targets, changer.Target{
 			ID: it.ID, Name: it.DisplayName, Kind: it.Kind, MAC: mac,
 		})
 	}
 	if len(targets) == 0 {
-		return a.opError("nessuna scheda valida selezionata")
+		return nil, "nessuna scheda valida selezionata"
+	}
+	return targets, ""
+}
+
+func (a *App) switchRandom(ids []string, persistent bool) OpResult {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	targets, errMsg := a.targetsFor(ids, func(it UIInterface) (string, error) {
+		// Fissa il MAC di fabbrica PRIMA di cambiarlo, se non già noto: è
+		// l'ancora del ripristino.
+		a.snapshotOriginal(it.Interface)
+
+		mac, err := macaddr.GenerateLocalRandom()
+		if err != nil {
+			return "", fmt.Errorf("generazione MAC fallita: %w", err)
+		}
+		return mac, nil
+	})
+	if errMsg != "" {
+		return a.opError(errMsg)
 	}
 	return a.apply(changer.Request{Action: changer.ActionSet, Persistent: persistent, Targets: targets})
 }

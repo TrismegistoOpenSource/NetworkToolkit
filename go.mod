@@ -1,6 +1,6 @@
 module networktoolkit
 
-go 1.25.0
+go 1.26.5
 
 require (
 	github.com/vishvananda/netlink v1.3.1

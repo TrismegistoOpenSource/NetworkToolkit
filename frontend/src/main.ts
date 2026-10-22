@@ -16,6 +16,7 @@ document.documentElement.dataset.os = navigator.platform.toLowerCase().includes(
 
 import {
   GetVersion,
+  VerifyIntegrity,
   GetCapabilities,
   ListInterfaces,
   SwitchTemporary,
@@ -589,4 +590,23 @@ async function init(): Promise<void> {
   logLine('Pronto. Seleziona una scheda e premi Switcha.', 'dim');
 }
 
-window.addEventListener('DOMContentLoaded', init);
+// Integrità del programma (internal/autoverifica): parte dopo il primo disegno e
+// non blocca niente. Se i file sono diversi dall'originale compare anche un avviso.
+async function showIntegrity(): Promise<void> {
+  try {
+    const s = await VerifyIntegrity();
+    const el = byId('integrity');
+    el.textContent = s.titolo;
+    el.title = s.dettaglio || s.titolo;
+    el.dataset.esito = s.esito;
+    el.hidden = false;
+    if (s.esito === 'diversi' || s.esito === 'firma_non_valida') {
+      toast(s.titolo + '. ' + (s.dettaglio || ''), 'err');
+    }
+  } catch { /* nessuna riga: verifica non disponibile */ }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  void init();
+  setTimeout(() => { void showIntegrity(); }, 600);
+});
